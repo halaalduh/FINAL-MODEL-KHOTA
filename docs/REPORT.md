@@ -4,7 +4,7 @@
 
 ## Project materials and provenance
 
-This package brings together the v2 model and supporting files supplied for Khota, with the earlier v1 model preserved in the archive. The Khota model requirements, Roboflow photos and annotation workbook were inputs to the model work described here. Sections 3 and 6 document the review of the supplied labels, the model experiments and the resulting artifacts. Data ownership and third-party model licenses are documented in [Licenses](LICENSES.md).
+This report covers Khota v2 and the archived v1 model. The dataset uses sidewalk photos exported from Roboflow and labels from the Khota annotation workbook. Section 3 describes the label review and model experiments. See [data preparation](../data/README.md), [licenses and data sources](LICENSES.md) and the [model repository](https://github.com/halaalduh/FINAL-MODEL-KHOTA).
 
 ## Summary
 
@@ -23,7 +23,7 @@ Khota looks for two kinds of defects in sidewalk photos: **Curb Ramp Issue** and
 
 * **Curb Ramp:** 0.557 on test and 0.659 on validation (test baseline 0.49, v1 0.61). The test split has 23 Curb Ramp boxes, so one box moves this value by several points.
 * **Surface Damage:** 0.193 on test (baseline setup 0.08, v1 0.17). Some damage had no label, and the boxes around similar defects varied in size (sections 5 and 9).
-* **Severity:** on the labelled test defects the classifier finds 17 of 24 High defects (recall 0.708, Macro-F1 0.761); on validation 0.808 and 0.788. With 24 High defects in the test split, one defect moves recall by 0.04.
+* **Severity:** on the labelled test defects the classifier finds 17 of 24 High defects (recall 0.708, Macro-F1 0.761); on validation 0.808 and 0.788. With 24 High defects in the test split, one defect moves recall by 0.04. The reproduced ResNet-18 baseline had a test Macro-F1 of 0.812 ± 0.027 and High recall of 0.681 ± 0.048. v2 had a lower Macro-F1 of 0.761 and High recall of 0.708. The baseline used the original labels, and v2 used the final labels (section 4.1).
 * **End to end on test:** v2 flagged 63 of 71 photos with a labelled defect (89%) and 7 of 32 photos without one (22% false alarms). For v1 the rates were 56% and 9%.
 * **Final model v2 — RF-DETR detector added:** a pre-trained detection transformer (DINOv2 backbone), fine-tuned on Khota and fused with the 7 YOLO detectors, raises validation mAP@0.5 from 0.379 to 0.446. On test it scores 0.375 against 0.389 for v1: Surface Damage improves (0.168 → 0.193), Curb Ramp does not (0.610 → 0.557), so the overall validation gain does not carry over to the test split. A difference of this size is comparable to the seed-to-seed spread on test (± 0.053 for Curb Ramp in the baseline setup), and v1 was scored before the last relabelling (3.14, 4.2).
 
@@ -58,7 +58,7 @@ Final labels; High-severity boxes in brackets. The same counts are in data/split
 | total | 689 | 493 | 196 | 183 | 162 (39) | 873 (154) | 1,035 (193) |
 
 * 689 photos from three Roboflow exports, cross-checked against the annotation workbook (the Boxes sheet is the authoritative label list).
-* **Location split, frozen:** photos whose GPS positions are within 200 m of each other form one location group, and a group is never split across train/val/test. The same sidewalk can therefore never appear in both training and evaluation, which would inflate every score.
+* **Location split, frozen:** photos whose GPS positions are within 200 m of each other form one location group, and a group is never split across train/val/test. The grouping reduces the chance of nearby photos appearing in both training and evaluation.
 * 196 photos have no target defect; they stay in the detector data as background examples.
 * **Label versions.** Original labels: 1,010 boxes (155 High, 194 photos without a defect). Reviewed: 1,044 (192 High, 195). Final: 1,035 (193 High, 196). The v2 results are scored on the final labels; 3.12 lists the labels each packaged model was trained on.
 
@@ -132,6 +132,8 @@ Detectors trained on two-thirds of the training photos scanned the remaining thi
 To add variety without more manual labelling, the models were pre-trained on **RDD2022**, a public road-damage dataset of phone photos from Japan, India, the Czech Republic, the United States and China (CC BY 4.0). 26,823 photos with 40,709 boxes were used. Their labels were mapped to the Khota scheme: longitudinal, transverse and alligator cracks became Surface Damage, Low–Medium; potholes became Surface Damage, High; other categories were ignored. RDD2022 has no curb ramps. YOLO26-s was pre-trained for 6 epochs on these photos and then trained on Khota exactly like the final detectors. The severity classifier was pre-trained on 20,997 road crops (5,997 potholes as High) and then trained on the Khota crops.
 
 **Validation results with the final labels.** The pre-trained YOLO26-s scores mAP@0.5 0.306, against 0.302–0.323 for the same model trained from the standard starting weights. Added to the 7-model ensemble as an eighth model, it moves mAP@0.5 from 0.379 to 0.381. The pre-trained severity ensemble is worse: Macro-F1 0.773 against 0.788, and 0.724 when High recall is held at 0.80 or more. The final model does not use the weights from this RDD2022 experiment.
+
+The separately documented RDD2022 feasibility evaluations use different checkpoints and splits. The [multicountry validation run](../notebooks/rdd2022/rerun_results.json) scored 57.96% F1 and 56.99% mAP@0.5 on 2,359 images. The [India-only test run](../notebooks/rdd2022/india_test_results.json) scored 45.16% precision and 15.79% recall at confidence 0.26, with mAP@0.5 of 14.65% on 500 images.
 
 ### 3.12 Relabelling outcome and retraining on the final labels
 
@@ -349,14 +351,14 @@ All results on the validation split (location-separated photos); every choice wa
 
 ## 9. What limits accuracy
 
-* **Surface Damage labels are inconsistent in extent.** The best model scores 0.43 AP when a detection only has to point at the right damage (IoU ≥ 0.1) but 0.23 when it must match the drawn box (IoU ≥ 0.5). The same kind of damage is drawn as one large box in one photo and as several small boxes in another.
+* **Surface Damage labels are inconsistent in extent.** The best model scores 0.44 AP when a detection only has to point at the right damage (IoU ≥ 0.1) but 0.23 when it must match the drawn box (IoU ≥ 0.5). The same kind of damage is drawn as one large box in one photo and as several small boxes in another.
 * **Labels are incomplete.** About half of the most confident “false” detections that were checked were real damage nobody had labelled, so a better model is penalised for finding them.
 * **The class mixes very different damage.** Hairline cracks and peeling (most boxes) share one class with missing paving and holes. Detectors trained with the two kinds separated learn them better.
 * **The dataset is small for this variety.** 482 training photos with 620 Surface Damage boxes (115 High) and 112 Curb Ramp boxes. With the final validation labels, Surface Damage AP was 0.147 for the seven YOLO detectors together and 0.233 after adding RF-DETR.
 
 ## 10. Surface Damage validation results
 
-Across the model experiments, Surface Damage validation AP ranged from 0.15 to 0.23 in the comparison summarised above.
+On the final validation labels, Surface Damage AP increased from 0.147 for v1 to 0.233 for v2.
 
 ## 11. Licenses and notices
 
@@ -404,12 +406,12 @@ Training and evaluation also use scipy, scikit-learn, pandas (BSD-3-Clause), ope
 
 ## 12. Annotation agreement (Cohen's kappa)
 
-Cohen's kappa was **not calculated**. Every photo was annotated once. The label review then corrected those labels against the rubric, with every change logged in the workbook. A corrected label is not an independent second annotation, so no annotator agreement can be computed from it. Measuring agreement needs a sample of photos labelled independently by two annotators.
+The model dataset in this repository records one set of labels per photo and a rubric-based review of those labels. Weighted Cohen’s kappa requires paired independent ratings. This repository does not contain those ratings or a kappa calculation for the separate pilot. Its records therefore cannot verify a pilot agreement score.
 
 ## 13. Use of generative AI
 
 * **Yes, generative AI was used to write the code.**
-* **Files written with it:** all code in the repository: inference/khota/ (__init__.py, api.py, classifier.py, crops.py, ensemble.py, pipeline.py), inference/predict.py, inference/examples/python_api_example.py and flutter_api_example.dart, and every script in data/scripts/, detection/scripts/, severity/scripts/ and evaluation/scripts/. It also wrote the scripts that build the documentation, the threshold tables and this report, and it drafted the documentation text (README files, integration guide, this report).
+* **Code written with generative AI includes** inference/khota/ (__init__.py, api.py, classifier.py, crops.py, ensemble.py, pipeline.py), inference/predict.py, inference/examples/python_api_example.py and flutter_api_example.dart, and every script in data/scripts/, detection/scripts/, severity/scripts/ and evaluation/scripts/. It also wrote the scripts that build the documentation, the threshold tables and this report, and it drafted the documentation text (README files, integration guide, this report).
 * **Other use.** In the label review, the AI tool compared the existing labels with the annotation rubric and proposed corrections; every applied change is logged in the Change_Log sheet of the workbook. The Surface Damage relabelling in Roboflow (49 changes) was done by hand.
 * **Not written by AI.** The training-settings files in detection/configs/ and severity/configs/ were written by the training tools. Every reported number comes from running the code on the data; no result was typed in by hand.
 

@@ -82,8 +82,7 @@
     "device": "mps",
     "torch": "2.8.0",
     "torchvision": "0.23.0",
-    "python": "3.9.6",
-    "platform": "macOS-26.6-arm64-arm-64bit"
+    "python": "3.9.6"
   },
   "selected_epoch": 15,
   "training_history": [

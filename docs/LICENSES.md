@@ -49,7 +49,7 @@ Licenses of the packaged models, of the software they run on and of the data beh
 
 | data | terms | used for |
 |---|---|---|
-| Khota photos and labels | ownership remains with the provider of the Khota images and annotations | training and evaluation of every packaged model |
+| Khota photos and labels | Khota photos and annotations retain their existing ownership and terms | training and evaluation of every packaged model |
 | COCO | annotations CC BY 4.0; images under the Flickr terms of use | pre-training of the Ultralytics and RF-DETR weights by their publishers |
 | ImageNet-1k | ImageNet terms of access | pre-training of the torchvision ResNet-18 weights by their publisher |
 | RDD2022 | CC BY 4.0 | one experiment only (report 3.11); not used by any packaged model |

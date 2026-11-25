@@ -27,5 +27,6 @@ The [results folder](results/) contains the measurements, plots and example dete
 
 - [Data](data/) contains the annotations, dataset splits and instructions for preparing the training photos.
 - [Detection](detection/) and [severity](severity/) contain the training scripts and settings. [Evaluation](evaluation/scripts/) contains the scoring scripts.
-- The [RDD2022 experiment](notebooks/rdd2022/) and [archived v1 model](archive/v1/) are available for reference.
+- See the [RDD2022](notebooks/rdd2022/) and [Project Sidewalk](notebooks/project-sidewalk/) feasibility experiments and the [archived v1 model](archive/v1/).
 - The [project report](docs/REPORT.md) covers the experiments, data source and use of AI. See also the [PDF report](docs/Khota_Project_Report.pdf) and [licenses](docs/LICENSES.md).
+- See [AUTHORS](AUTHORS) for the project team and supervisor.

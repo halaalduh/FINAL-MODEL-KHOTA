@@ -16,3 +16,7 @@ python evaluate.py /path/to/rdd2022-dataset
 ```
 
 The script verifies the checkpoint, manifest, images and labels by SHA-256 and writes the rerun metrics to `rerun_results.json`.
+
+## Separate India test evaluation
+
+The India-only test run used a different checkpoint on 500 images with 1,064 labelled boxes. The [saved results](india_test_results.json) show precision **45.16%**, recall **15.79%** and F1 **23.40%** at confidence 0.26 and matching IoU 0.50. **mAP@0.5 was 14.65%**, measured by the Ultralytics evaluator. The [protocol](india_test_protocol.json) records the checkpoint hash and settings. The [Ultralytics output](india_test_ultralytics.json) reports its own precision and recall at a different operating point. The India test checkpoint and dataset are outside this repository.

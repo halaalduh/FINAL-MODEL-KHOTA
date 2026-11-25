@@ -46,4 +46,4 @@ selected epoch 15 (best val acc 0.7630)
 [test]   damage    P 0.7531 R 0.7823 F1 0.7674 n 620
 [test]   no damage P 0.6447 R 0.6064 F1 0.6250 n 404
 [test]   confusion (rows true, cols pred, order ['damage', 'no damage']): [[485, 135], [159, 245]]
-saved /Users/haifar/outputs/sidewalk_binary/results.json
+saved outputs/sidewalk_binary/results.json
