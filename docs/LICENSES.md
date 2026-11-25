@@ -61,4 +61,4 @@ Licenses of the packaged models, of the software they run on and of the data beh
 * **BSD, MIT, MIT-CMU, PSF-based and Zlib** (PyTorch, torchvision, NumPy, Pillow, FastAPI, uvicorn and others): keep the copyright notice and the license text in redistributions.
 * **MPL-2.0** (part of tqdm): changes to tqdm's own files must be published under MPL-2.0. Using tqdm unchanged creates no obligation.
 * **Pre-training data.** The pre-trained weights come from their publishers (Ultralytics, Roboflow, Meta, torchvision). Their training data (COCO, ImageNet-1k, DINOv2's LVD-142M) carries its own terms; the publishers release the weights under the licenses above.
-* This list is a summary, not legal advice. Please have it confirmed by your legal team before a commercial release.
+* This list is a summary, not legal advice. Please have it confirmed by qualified legal counsel before a commercial release.

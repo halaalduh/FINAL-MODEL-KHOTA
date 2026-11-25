@@ -4,32 +4,32 @@
 
 ## Project materials and provenance
 
-This package brings together the v2 model and supporting files supplied for Khota, with the earlier v1 model preserved in the archive. The Khota team's model requirements, Roboflow photos and annotation workbook were inputs to the model work described here. Sections 3 and 6 document the review of the supplied labels, the model experiments and the resulting artifacts. Data ownership and third-party model licenses are documented in [Licenses](LICENSES.md).
+This package brings together the v2 model and supporting files supplied for Khota, with the earlier v1 model preserved in the archive. The Khota model requirements, Roboflow photos and annotation workbook were inputs to the model work described here. Sections 3 and 6 document the review of the supplied labels, the model experiments and the resulting artifacts. Data ownership and third-party model licenses are documented in [Licenses](LICENSES.md).
 
 ## Summary
 
 The system looks at a sidewalk photo, finds every defect, says whether it is a **Curb Ramp Issue** or **Surface Damage**, and rates each defect **Low–Medium** or **High** severity. This package includes trained models, an inference pipeline (command line, Python and an HTTP API for the app; the detection and severity models can also be used on their own), and this report.
 
-| metric | target / team's earlier result | baseline setup reproduced (test) | v1 (test) | v2 (val) | v2 (test) |
-|---|---|---|---|---|---|
-| mAP@0.5 Curb Ramp Issue | above 0.60 | 0.493 ± 0.053 | 0.610 | 0.659 | **0.557** |
-| mAP@0.5 Surface Damage | above 0.60 (was 0.08) | 0.079 ± 0.006 | 0.168 | 0.233 | **0.193** |
-| mAP@0.5, both classes | – | 0.286 ± 0.027 | 0.389 | 0.446 | **0.375** |
-| Severity: High recall | improve on 0.587 ± 0.027 | 0.681 ± 0.048 | 0.708 | 0.808 | **0.708** |
-| Severity: Macro-F1 | 0.798 ± 0.005 | 0.812 ± 0.027 | 0.753 | 0.788 | **0.761** |
-| Severity: accuracy | majority baseline 0.869 | 0.902 ± 0.020 | 0.854 (maj. 0.847) | 0.857 (maj. 0.823) | **0.859 (maj. 0.846)** |
+| metric | baseline setup reproduced (test) | v1 (test) | v2 (val) | v2 (test) |
+|---|---|---|---|---|
+| mAP@0.5 Curb Ramp Issue | 0.493 ± 0.053 | 0.610 | 0.659 | **0.557** |
+| mAP@0.5 Surface Damage | 0.079 ± 0.006 | 0.168 | 0.233 | **0.193** |
+| mAP@0.5, both classes | 0.286 ± 0.027 | 0.389 | 0.446 | **0.375** |
+| Severity: High recall | 0.681 ± 0.048 | 0.708 | 0.808 | **0.708** |
+| Severity: Macro-F1 | 0.812 ± 0.027 | 0.753 | 0.788 | **0.761** |
+| Severity: accuracy | 0.902 ± 0.020 | 0.854 (maj. 0.847) | 0.857 (maj. 0.823) | **0.859 (maj. 0.846)** |
 
 “Baseline setup reproduced” = the project's baseline models (YOLOv8n 640 px; ResNet-18 at threshold 0.5) trained on the original labels and scored on the same test photos; ± = standard deviation over seeds 42/43/44. v2 is the packaged model (detection confidence 0.15, High threshold 0.29, both chosen on validation). v2 is scored on the final labels; v1 and the baseline setup were scored before the last relabelling round, which changed 3 test boxes and 12 validation boxes. On the final validation labels v1 scores mAP@0.5 0.379 (Curb Ramp 0.611, Surface Damage 0.147). All mAP values use the same AP code.
 
-* **Curb Ramp:** 0.557 on test and 0.659 on validation (target above 0.60; on test the baseline setup scores 0.49 and v1 0.61). The test split has 23 Curb Ramp boxes, so one box moves this value by several points.
-* **Surface Damage improved, but is far from the target:** 0.193 on test (baseline setup 0.08, v1 0.17). The limit is the Surface Damage labels themselves (sections 5 and 9).
+* **Curb Ramp:** 0.557 on test and 0.659 on validation (test baseline 0.49, v1 0.61). The test split has 23 Curb Ramp boxes, so one box moves this value by several points.
+* **Surface Damage:** 0.193 on test (baseline setup 0.08, v1 0.17). The limit is the Surface Damage labels themselves (sections 5 and 9).
 * **Severity:** on the labelled test defects the classifier finds 17 of 24 High defects (recall 0.708, Macro-F1 0.761); on validation 0.808 and 0.788. With 24 High defects in the test split, one defect moves recall by 0.04.
 * **End to end on test:** 89% of the photos that contain a labelled defect get flagged, and 22% of photos without a defect raise a false alarm (v1: 56% and 9%).
 * **Final model v2 — RF-DETR detector added:** a pre-trained detection transformer (DINOv2 backbone), fine-tuned on Khota and fused with the 7 YOLO detectors, raises validation mAP@0.5 from 0.379 to 0.446. On test it scores 0.375 against 0.389 for v1: Surface Damage improves (0.168 → 0.193), Curb Ramp does not (0.610 → 0.557), so the overall validation gain does not carry over to the test split. A difference of this size is comparable to the seed-to-seed spread on test (± 0.053 for Curb Ramp in the baseline setup), and v1 was scored before the last relabelling (3.14, 4.2).
 
 ## 1. The task
 
-Khota's app collects sidewalk photos. The goal is to find the defects in each photo automatically and rate how serious each one is, so repairs can be prioritised without inspecting every photo by hand. The project requirements specified a two-stage design:
+Khota's app collects sidewalk photos. The pipeline detects and grades defects in each photo. The project requirements specified a two-stage design:
 
 1. **Detector (YOLO)** — finds each defect in the whole photo, draws a box and names its type: Curb Ramp Issue (class 0) or Surface Damage (class 1).
 2. **Severity classifier (ResNet-18)** — looks at each detected box, enlarged 20% per side, cropped from the original photo and resized to 224 × 224, and decides Low–Medium or High.
@@ -42,9 +42,9 @@ Output per photo: a list of defects (box, type, confidence, severity, probabilit
 | Surface Damage | 719 | 154 | 873 |
 | total | 842 | 193 | 1,035 |
 
-Severity follows the team's rubric: Low–Medium = SD-NS1/NS2 and CR-NS1/NS2; High = SD-H1 (missing paving with the layer below exposed, or an open cavity), SD-H2 (severe breakage with missing pieces, or a displaced slab leaving a gap), SD-H3 (path interruption), CR-H1/H2. Cracks or peeling alone are never High.
+Severity follows the annotation rubric: Low–Medium = SD-NS1/NS2 and CR-NS1/NS2; High = SD-H1 (missing paving with the layer below exposed, or an open cavity), SD-H2 (severe breakage with missing pieces, or a displaced slab leaving a gap), SD-H3 (path interruption), CR-H1/H2. Cracks or peeling alone are never High.
 
-**Evaluation protocol:** split by location; choose everything on the validation split; use the test split only for the final evaluation; three seeds (42/43/44) reported as mean ± std; report every configuration tried; log every label change in the team's Excel workbook.
+**Evaluation protocol:** split by location; choose everything on the validation split; use the test split only for the final evaluation; three seeds (42/43/44) reported as mean ± std; report every configuration tried; log every label change in the annotation workbook.
 
 ## 2. Data and split
 
@@ -57,7 +57,7 @@ Final labels; High-severity boxes in brackets. The same counts are in data/split
 | test | 103 | 71 | 32 | 28 | 23 (5) | 133 (19) | 156 (24) |
 | total | 689 | 493 | 196 | 183 | 162 (39) | 873 (154) | 1,035 (193) |
 
-* 689 photos from three Roboflow exports, cross-checked against the team's Excel workbook (the Boxes sheet is the authoritative label list).
+* 689 photos from three Roboflow exports, cross-checked against the annotation workbook (the Boxes sheet is the authoritative label list).
 * **Location split, frozen:** photos whose GPS positions are within 200 m of each other form one location group, and a group is never split across train/val/test. The same sidewalk can therefore never appear in both training and evaluation, which would inflate every score.
 * 196 photos have no target defect; they stay in the detector data as background examples.
 * **Label versions.** Original labels: 1,010 boxes (155 High, 194 photos without a defect). Reviewed: 1,044 (192 High, 195). Final: 1,035 (193 High, 196). The v2 results are scored on the final labels; 3.12 lists the labels each packaged model was trained on.
@@ -68,7 +68,7 @@ Final labels; High-severity boxes in brackets. The same counts are in data/split
 
 The label files in the Roboflow exports were cross-checked box by box against the Excel workbook:
 
-* The exports contain 693 photos; the workbook indexes 689. The 4 extra photos (RYD-0058, 0415, 0418, 0423) are marked *Excluded* by the team and were left out.
+* The exports contain 693 photos; the workbook indexes 689. The 4 extra photos (RYD-0058, 0415, 0418, 0423) are marked *Excluded* and were left out.
 * The label files hold 1,010 boxes; the Boxes sheet has 1,000 rows. 10 label boxes have no row in the Boxes sheet and 4 rows have a missing or invalid severity (one contains a note to decide later). These 14 boxes were marked “undecided”.
 * 9 rows of the older Box_Assignment sheet disagree with the Boxes sheet, 2 boxes point to the wrong photo and 1 file name was wrong (RYD-0591, fixed). 53 severities in the older Batch sheets differ from the Boxes sheet; the Boxes sheet was used.
 
@@ -78,11 +78,11 @@ A 200 m single-linkage grouping of the GPS positions gave 183 location groups, a
 
 ### 3.3 First round on the original labels
 
-The project's baseline models were trained with three seeds: YOLOv8n at 640 px and ResNet-18. They reproduced the team's own numbers (Surface Damage mAP@0.5 0.08). A YOLOv8n trial at 1280 px was *worse* (Surface Damage 0.05, Curb Ramp 0.48), which ruled out image resolution as the cause.
+The project's baseline models were trained with three seeds: YOLOv8n at 640 px and ResNet-18. Baseline Surface Damage mAP@0.5 was 0.08. A YOLOv8n trial at 1280 px was *worse* (Surface Damage 0.05, Curb Ramp 0.48), which ruled out image resolution as the cause.
 
-### 3.4 Label review (after the team's feedback)
+### 3.4 Label review
 
-The team asked for the labels to be corrected before more experiments — in particular multi-box photos where every box was High. Every change is logged box by box in *Khota_Model_Final_reviewed.xlsx* (changed rows green, borderline calls amber, plus Change_Log and Review_Questions sheets).
+The label review included multi-box photos where every box was marked High. Every change is logged box by box in *Khota_Model_Final_reviewed.xlsx* (changed rows green, borderline calls amber, plus Change_Log and Review_Questions sheets).
 
 | review step | changes | what changed |
 |---|---|---|
@@ -101,7 +101,7 @@ The team asked for the labels to be corrected before more experiments — in par
 ### 3.5 Severity classifier experiments
 
 * 8 configurations screened with one seed: ResNet-18 with weighted cross-entropy (baseline), class-balanced sampling, focal loss, head-only warm-up, strong augmentation with box jitter, ResNet-50, EfficientNet-B0, ConvNeXt-Tiny.
-* The 4 most promising were retrained on the final labels with seeds 42/43/44.
+* The 4 selected configurations were retrained on the final labels with seeds 42/43/44.
 * Single models proved unstable: validation has only 26 High crops, and High recall varies by up to ± 0.22 between seeds. Averaging models removes most of that variance.
 * **Chosen on validation:** the mean High probability of 6 ResNet-18 models (weighted cross-entropy and class-balanced sampling, 3 seeds each), each also scored on the mirrored crop; High if ≥ 0.29. 0.29 gives the best Macro-F1 on validation and also keeps High recall ≥ 0.80.
 
@@ -121,7 +121,7 @@ Combining models helped far more than choosing between them: the 7 trained YOLO 
 
 ### 3.9 Reviewed labels in Roboflow
 
-All 689 photos with the reviewed labels were uploaded to a new private Roboflow project, **khota-reviewed**, in the team's workspace. The team's original projects (khota-batch1/2/3) were not modified. The new project uses four classes so severity is visible on every box (curb-ramp-issue-high / -low-medium, surface-damage-high / -low-medium), keeps the train / valid / test split, and tags photos *changed, severity-changed, box-added, box-deleted, needs-confirmation* (42 photos) and *roboflow-differs*. The last tag marks 6 photos where the team's current Roboflow project has fewer boxes than the export we received (e.g. RYD-0045: 4 instead of 10) — mostly boxes that were “undecided” and were apparently deleted after the export; these 6 photos are checked during the relabelling.
+All 689 photos with the reviewed labels were uploaded to a new private Roboflow project, **khota-reviewed**, in the Khota workspace. The original projects (khota-batch1/2/3) were not modified. The new project uses four classes so severity is visible on every box (curb-ramp-issue-high / -low-medium, surface-damage-high / -low-medium), keeps the train / valid / test split, and tags photos *changed, severity-changed, box-added, box-deleted, needs-confirmation* (42 photos) and *roboflow-differs*. The last tag marks 6 photos where the current Roboflow project has fewer boxes than the export we received (e.g. RYD-0045: 4 instead of 10) — mostly boxes that were “undecided” and were apparently deleted after the export; these 6 photos are checked during the relabelling.
 
 ### 3.10 Automatic relabelling attempt (pseudo-labelling)
 
@@ -247,7 +247,7 @@ v2 detector ensemble, final labels, the same AP code on every split:
 
 mAP is **not** low on the training photos: v2 reaches mAP@0.5 0.845 on the photos it was trained on (Curb Ramp 0.934, Surface Damage 0.756), against 0.446 on validation. The low values in the run tables (about 0.3 for single YOLO models; results/val_runs_detector.csv and Appendix A) are validation results, not training results. The numbers show three things:
 
-* **The models fit the training photos, but the fit does not carry over to new locations.** The drop from 0.845 to 0.446 is the gap between photos the models have learned and sidewalks they have never seen. With 482 training photos for this much variety of damage, this is the expected sign of too little data (section 10).
+* **The models fit the training photos, but the fit does not carry over to new locations.** The drop from 0.845 to 0.446 is the gap between photos the models have learned and sidewalks they have never seen.
 * **Surface Damage is lower than Curb Ramp even on the training photos** (0.756 against 0.934). The same kind of damage is drawn as one large box in one photo and as several small boxes in another, and no model can match both. Training stops at the best validation score, not at the closest fit to the training labels.
 * **On new photos the detector often finds the damage but draws a different box.** Surface Damage AP on validation is 0.439 at IoU ≥ 0.1, against 0.233 at IoU ≥ 0.5 (training photos: 0.829 and 0.756).
 
@@ -286,7 +286,7 @@ Full v2 pipeline as the app calls it: 20 original validation photos (4032 × 302
 
 ## 5. Why Surface Damage detection is low
 
-Every single model scores about 0.10 mAP@0.5 on Surface Damage (0.08 with the original labels, the same as the team's own result); even the 7-model ensemble reaches only 0.15–0.17. The evidence points at the labels, not the model:
+Every single model scores about 0.10 mAP@0.5 on Surface Damage (0.08 with the original labels); even the 7-model ensemble reaches only 0.15–0.17. The evidence points at the labels, not the model:
 
 1. **Model size and resolution make no difference.** YOLOv8n at 640 and 1280 px, YOLO26-s and YOLO26-m all land between 0.05 and 0.12 on Surface Damage, while the same models on the same photos reach 0.5–0.6 on Curb Ramp. A small-object or capacity problem would improve with 1280 px or a larger model.
 2. **The detector finds the damage but draws a different box than the label.** On validation, Surface Damage AP is 0.21 at IoU ≥ 0.1 but 0.09 at IoU ≥ 0.5; out of fold over all photos about half of the Surface Damage boxes are hit at IoU ≥ 0.1 but only about 20% at IoU ≥ 0.5. For Curb Ramp the numbers are almost the same. Where a damaged area starts and ends — one big box or several small ones — is drawn differently from photo to photo, so a detection on the right damage often counts as wrong.
@@ -294,9 +294,8 @@ Every single model scores about 0.10 mAP@0.5 on Surface Damage (0.08 with the or
 4. **Automatic relabelling does not work.** The pseudo-labelling attempt (3.10) found mostly look-alikes: manholes, grates, paint, steps. The labels have to be corrected by hand, with clear rules.
 5. **The class is broad and its boundary is subjective.** Surface Damage covers hairline cracks, peeling, crumbling edges, missing tiles and potholes. A quarter of the boxes cover less than 0.35% of the photo. Whether a worn tile or a small curb chip counts as damage varies from photo to photo.
 
-> **What this means:** with the current labels no detector can score high, because many of its correct detections are counted as errors. A consistent Surface Damage relabelling is the step with a real chance of a large improvement. A target of 0.60 cannot be promised even then, but it is the only route towards it. A further option is splitting Surface Damage into “minor” (cracks, peeling) and “major” (missing or broken paving, holes), a change to the original class definition. Each class would then be visually consistent, and major damage, which matters most, would likely be detected much better.
 
-**Relabelling outcome.** 300 photos (211 train, 51 validation, 38 test) were relabelled in Roboflow with fixed labelling rules. Most labels were already consistent with the rules: 49 changes in 37 photos (33 boxes redrawn, 10 removed, 3 severity changes, 2 class changes, 1 box added). They are logged in the annotation workbook like every other change (160 changes in total; 1,035 boxes now). Because so few labels changed, the pass was stopped at 300 photos. Retraining on the corrected labels did not improve validation (3.12), and neither did public road-damage data (3.11). The remaining limit is the class definition itself, so splitting Surface Damage into minor and major damage is the recommended next step.
+**Relabelling outcome.** 300 photos (211 train, 51 validation, 38 test) were relabelled in Roboflow with fixed labelling rules. Most labels were already consistent with the rules: 49 changes in 37 photos (33 boxes redrawn, 10 removed, 3 severity changes, 2 class changes, 1 box added). They are logged in the annotation workbook like every other change (160 changes in total; 1,035 boxes now). Because so few labels changed, the pass was stopped at 300 photos. Retraining on the corrected labels did not improve validation (3.12), and neither did public road-damage data (3.11).
 
 ## 6. Package contents
 
@@ -320,7 +319,7 @@ Every single model scores about 0.10 mAP@0.5 on Surface Damage (0.08 with the or
 
 * Location-based split, frozen before training; no location appears in two splits.
 * Checkpoints, model choice, ensemble members, detection confidence and High threshold were all chosen on **validation** only.
-* The test split was scored **three times**, each time only after every choice was fixed on validation: (1) the first pipeline (single YOLO26-s detector); (2) with the project owner's approval, v1 (7-detector ensemble and the preprocessing fix); (3) at the team's request, v2, once, with the thresholds chosen on validation (0.15 and 0.29). Nothing was tuned on test; the severity classifier is identical in all three runs.
+* The test split was scored **three times**, each time only after every choice was fixed on validation: (1) the first pipeline (single YOLO26-s detector); (2) v1 (7-detector ensemble and the preprocessing fix); (3) v2, once, with the thresholds chosen on validation (0.15 and 0.29). Nothing was tuned on test; the severity classifier is identical in all three runs.
 * Seeds 42/43/44, reported as mean ± std; every configuration tried is listed in Appendix A; every label change is logged in the annotation workbook.
 
 ## 8. Research log — every step and its result
@@ -355,14 +354,9 @@ All results on the validation split (location-separated photos); every choice wa
 * **The class mixes very different damage.** Hairline cracks and peeling (most boxes) share one class with missing paving and holes. Detectors trained with the two kinds separated learn them better.
 * **The dataset is small for this variety.** 482 training photos with 620 Surface Damage boxes (115 High) and 112 Curb Ramp boxes. Every model family tried - YOLO of every size, a detection transformer, CNN and ViT classifiers - ends at a similar ceiling, which is the signature of a data limit, not a model limit.
 
-## 10. What will raise accuracy: data
+## 10. Surface Damage validation results
 
-Fifteen model-side experiments moved Surface Damage from 0.15 to 0.23 at most. The evidence above points to the data - its size and the consistency of its labels - as the limit. The next gain will come from data:
-
-* **More in-domain photos.** Riyadh sidewalks photographed on foot, like the app's photos: thousands of defect instances (a few thousand Surface Damage boxes, several hundred Curb Ramp boxes, and several hundred High-severity examples). Public road-damage data did not substitute for this (step 10).
-* **High-quality labels.** Every defect in every photo labelled, one box per contiguous damaged area drawn tight to the damage, following fixed written rules; a second person checks a sample.
-* **Separate major and minor damage.** Missing paving, holes and broken slabs (what matters for repairs) as their own class; cracks and peeling as another. For cracks, outlines (polygons) instead of boxes.
-* **Grow the data in steps and measure.** Retrain after each batch of new photos and track the validation curve; the pipeline, scripts and split are ready for that (retraining is one command).
+Across the model experiments, Surface Damage validation AP ranged from 0.15 to 0.23 in the comparison summarised above.
 
 ## 11. Licenses and notices
 
@@ -406,17 +400,17 @@ Training and evaluation also use scipy, scikit-learn, pandas (BSD-3-Clause), ope
 * **BSD, MIT, MIT-CMU, PSF-based and Zlib** (PyTorch, torchvision, NumPy, Pillow, FastAPI, uvicorn and others): keep the copyright notice and the license text in redistributions.
 * **MPL-2.0** (part of tqdm): changes to tqdm's own files must be published under MPL-2.0. Using tqdm unchanged creates no obligation.
 * **Pre-training data.** The pre-trained weights come from their publishers (Ultralytics, Roboflow, Meta, torchvision). Their training data (COCO, ImageNet-1k, DINOv2's LVD-142M) carries its own terms; the publishers release the weights under the licenses above.
-* This list is a summary, not legal advice. Please have it confirmed by your legal team before a commercial release.
+* This list is a summary, not legal advice. Please have it confirmed by qualified legal counsel before a commercial release.
 
 ## 12. Annotation agreement (Cohen's kappa)
 
-Cohen's kappa was **not calculated**. Every photo was annotated once, by the project team. The label review then corrected those labels against the rubric, with every change logged in the workbook. A corrected label is not an independent second annotation, so no annotator agreement can be computed from it. Measuring agreement needs a sample of photos labelled independently by two annotators.
+Cohen's kappa was **not calculated**. Every photo was annotated once. The label review then corrected those labels against the rubric, with every change logged in the workbook. A corrected label is not an independent second annotation, so no annotator agreement can be computed from it. Measuring agreement needs a sample of photos labelled independently by two annotators.
 
 ## 13. Use of generative AI
 
 * **Yes, generative AI was used to write the code.**
 * **Files written with it:** all code in the repository: inference/khota/ (__init__.py, api.py, classifier.py, crops.py, ensemble.py, pipeline.py), inference/predict.py, inference/examples/python_api_example.py and flutter_api_example.dart, and every script in data/scripts/, detection/scripts/, severity/scripts/ and evaluation/scripts/. It also wrote the scripts that build the documentation, the threshold tables and this report, and it drafted the documentation text (README files, integration guide, this report).
-* **Other use.** In the label review, the AI tool compared the existing labels with the team's rubric and proposed corrections; every applied change is logged in the Change_Log sheet of the workbook. The Surface Damage relabelling in Roboflow (49 changes) was done by hand.
+* **Other use.** In the label review, the AI tool compared the existing labels with the annotation rubric and proposed corrections; every applied change is logged in the Change_Log sheet of the workbook. The Surface Damage relabelling in Roboflow (49 changes) was done by hand.
 * **Not written by AI.** The training-settings files in detection/configs/ and severity/configs/ were written by the training tools. Every reported number comes from running the code on the data; no result was typed in by hand.
 
 ## Appendix A — every configuration tried (validation)

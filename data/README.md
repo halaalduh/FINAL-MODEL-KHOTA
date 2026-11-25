@@ -41,9 +41,9 @@ Export these three dataset versions from Roboflow in **YOLO26** format and unzip
 
 | folder | Roboflow project | version |
 |---|---|---|
-| `data/raw/batch1/` | khota-batch1 | v5 (batch1_team_reviewed2) |
+| `data/raw/batch1/` | khota-batch1 | v5 |
 | `data/raw/batch2/` | khota-batch2 | v6 (batch2_edited) |
-| `data/raw/batch3/` | khota-batch3 | v4 (batch3_team_reviewed2) |
+| `data/raw/batch3/` | khota-batch3 | v4 |
 
 Each folder then holds `data.yaml` and `train/images/*.jpg`; the file names in `annotations/images_final.csv` are the
 ones of these versions. Only the photos are taken from the exports; the labels come from `annotations/boxes_final.csv`.
