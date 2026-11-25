@@ -8,7 +8,7 @@ This package brings together the v2 model and supporting files supplied for Khot
 
 ## Summary
 
-The system looks at a sidewalk photo, finds every defect, says whether it is a **Curb Ramp Issue** or **Surface Damage**, and rates each defect **Low–Medium** or **High** severity. This package includes trained models, an inference pipeline (command line, Python and an HTTP API for the app; the detection and severity models can also be used on their own), and this report.
+Khota looks for two kinds of defects in sidewalk photos: **Curb Ramp Issue** and **Surface Damage**. For each detection, it predicts **Low–Medium** or **High** severity. This package includes trained models, an inference pipeline (command line, Python and an HTTP API for the app; the detection and severity models can also be used on their own), and this report.
 
 | metric | baseline setup reproduced (test) | v1 (test) | v2 (val) | v2 (test) |
 |---|---|---|---|---|
@@ -22,16 +22,16 @@ The system looks at a sidewalk photo, finds every defect, says whether it is a *
 “Baseline setup reproduced” = the project's baseline models (YOLOv8n 640 px; ResNet-18 at threshold 0.5) trained on the original labels and scored on the same test photos; ± = standard deviation over seeds 42/43/44. v2 is the packaged model (detection confidence 0.15, High threshold 0.29, both chosen on validation). v2 is scored on the final labels; v1 and the baseline setup were scored before the last relabelling round, which changed 3 test boxes and 12 validation boxes. On the final validation labels v1 scores mAP@0.5 0.379 (Curb Ramp 0.611, Surface Damage 0.147). All mAP values use the same AP code.
 
 * **Curb Ramp:** 0.557 on test and 0.659 on validation (test baseline 0.49, v1 0.61). The test split has 23 Curb Ramp boxes, so one box moves this value by several points.
-* **Surface Damage:** 0.193 on test (baseline setup 0.08, v1 0.17). The limit is the Surface Damage labels themselves (sections 5 and 9).
+* **Surface Damage:** 0.193 on test (baseline setup 0.08, v1 0.17). Some damage had no label, and the boxes around similar defects varied in size (sections 5 and 9).
 * **Severity:** on the labelled test defects the classifier finds 17 of 24 High defects (recall 0.708, Macro-F1 0.761); on validation 0.808 and 0.788. With 24 High defects in the test split, one defect moves recall by 0.04.
-* **End to end on test:** 89% of the photos that contain a labelled defect get flagged, and 22% of photos without a defect raise a false alarm (v1: 56% and 9%).
+* **End to end on test:** v2 flagged 63 of 71 photos with a labelled defect (89%) and 7 of 32 photos without one (22% false alarms). For v1 the rates were 56% and 9%.
 * **Final model v2 — RF-DETR detector added:** a pre-trained detection transformer (DINOv2 backbone), fine-tuned on Khota and fused with the 7 YOLO detectors, raises validation mAP@0.5 from 0.379 to 0.446. On test it scores 0.375 against 0.389 for v1: Surface Damage improves (0.168 → 0.193), Curb Ramp does not (0.610 → 0.557), so the overall validation gain does not carry over to the test split. A difference of this size is comparable to the seed-to-seed spread on test (± 0.053 for Curb Ramp in the baseline setup), and v1 was scored before the last relabelling (3.14, 4.2).
 
 ## 1. The task
 
 Khota's app collects sidewalk photos. The pipeline detects and grades defects in each photo. The project requirements specified a two-stage design:
 
-1. **Detector (YOLO)** — finds each defect in the whole photo, draws a box and names its type: Curb Ramp Issue (class 0) or Surface Damage (class 1).
+1. **Detector (YOLO and RF-DETR in v2)** — marks possible defects with boxes and labels them as Curb Ramp Issue (class 0) or Surface Damage (class 1).
 2. **Severity classifier (ResNet-18)** — looks at each detected box, enlarged 20% per side, cropped from the original photo and resized to 224 × 224, and decides Low–Medium or High.
 
 Output per photo: a list of defects (box, type, confidence, severity, probability of High) or “No Target Defect”. Every defect is therefore one of four combinations (final labels):
@@ -78,7 +78,7 @@ A 200 m single-linkage grouping of the GPS positions gave 183 location groups, a
 
 ### 3.3 First round on the original labels
 
-The project's baseline models were trained with three seeds: YOLOv8n at 640 px and ResNet-18. Baseline Surface Damage mAP@0.5 was 0.08. A YOLOv8n trial at 1280 px was *worse* (Surface Damage 0.05, Curb Ramp 0.48), which ruled out image resolution as the cause.
+The project's baseline models were trained with three seeds: YOLOv8n at 640 px and ResNet-18. Baseline Surface Damage mAP@0.5 was 0.08. A YOLOv8n trial at 1280 px was *worse* (Surface Damage 0.05, Curb Ramp 0.48).
 
 ### 3.4 Label review
 
@@ -117,21 +117,21 @@ The first pipeline (single YOLO26-s detector) was scored on the test split. That
 
 ### 3.8 Detector ensemble (final detector)
 
-Combining models helped far more than choosing between them: the 7 trained YOLO detectors were fused into one ensemble (v1), with the detection confidence (0.12) chosen on validation. With the project owner's approval the test split was then scored a second time for this pipeline.
+Combining models helped far more than choosing between them: the 7 trained YOLO detectors were fused into one ensemble (v1), with the detection confidence (0.12) chosen on validation. This was the second run on the test split.
 
 ### 3.9 Reviewed labels in Roboflow
 
-All 689 photos with the reviewed labels were uploaded to a new private Roboflow project, **khota-reviewed**, in the Khota workspace. The original projects (khota-batch1/2/3) were not modified. The new project uses four classes so severity is visible on every box (curb-ramp-issue-high / -low-medium, surface-damage-high / -low-medium), keeps the train / valid / test split, and tags photos *changed, severity-changed, box-added, box-deleted, needs-confirmation* (42 photos) and *roboflow-differs*. The last tag marks 6 photos where the current Roboflow project has fewer boxes than the export we received (e.g. RYD-0045: 4 instead of 10) — mostly boxes that were “undecided” and were apparently deleted after the export; these 6 photos are checked during the relabelling.
+All 689 photos with the reviewed labels were uploaded to a new private Roboflow project, **khota-reviewed**, in the Khota workspace. The original projects (khota-batch1/2/3) were not modified. The new project uses four classes so severity is visible on every box (curb-ramp-issue-high / -low-medium, surface-damage-high / -low-medium), keeps the train / valid / test split, and tags photos *changed, severity-changed, box-added, box-deleted, needs-confirmation* (42 photos) and *roboflow-differs*. The last tag marks 6 photos with fewer boxes in Roboflow than in the original export. For example, RYD-0045 had 4 boxes in Roboflow and 10 in the export.
 
 ### 3.10 Automatic relabelling attempt (pseudo-labelling)
 
-Detectors trained on two-thirds of the training photos scanned the remaining third for Surface Damage that no label covers. They returned 107 candidates. A visual check of the 40 most confident found 8 clear defects, 9 borderline cases (small curb cracks and chips) and 23 look-alikes — manholes, tree and drain grates, painted curbs, road markings, steps. Adding these automatically would teach the model that manholes and paint are damage, so no model was retrained on them. Conclusion: the missing labels are corrected by hand.
+Detectors trained on two-thirds of the training photos scanned the remaining third for Surface Damage that no label covers. They returned 107 candidates. A visual check of the 40 most confident found 8 clear defects, 9 borderline cases (small curb cracks and chips) and 23 look-alikes — manholes, tree and drain grates, painted curbs, road markings, steps. These predictions were left out of training. Missing labels were added by hand.
 
 ### 3.11 Public road-damage data (RDD2022)
 
 To add variety without more manual labelling, the models were pre-trained on **RDD2022**, a public road-damage dataset of phone photos from Japan, India, the Czech Republic, the United States and China (CC BY 4.0). 26,823 photos with 40,709 boxes were used. Their labels were mapped to the Khota scheme: longitudinal, transverse and alligator cracks became Surface Damage, Low–Medium; potholes became Surface Damage, High; other categories were ignored. RDD2022 has no curb ramps. YOLO26-s was pre-trained for 6 epochs on these photos and then trained on Khota exactly like the final detectors. The severity classifier was pre-trained on 20,997 road crops (5,997 potholes as High) and then trained on the Khota crops.
 
-**Result on validation (final labels): no gain.** The pre-trained YOLO26-s scores mAP@0.5 0.306, against 0.302–0.323 for the same model trained from the standard starting weights. Added to the 7-model ensemble as an eighth model, it moves mAP@0.5 from 0.379 to 0.381, which is within noise. The pre-trained severity ensemble is worse: Macro-F1 0.773 against 0.788, and 0.724 when High recall is held at 0.80 or more. A likely reason is that road cracks and potholes photographed from a car look different from sidewalk damage, and the hard part of the Khota labels (where a damaged area starts and ends) is not something more road photos teach. The planned YOLOv8n pre-training was therefore stopped, and no public data is used in the final model.
+**Validation results with the final labels.** The pre-trained YOLO26-s scores mAP@0.5 0.306, against 0.302–0.323 for the same model trained from the standard starting weights. Added to the 7-model ensemble as an eighth model, it moves mAP@0.5 from 0.379 to 0.381. The pre-trained severity ensemble is worse: Macro-F1 0.773 against 0.788, and 0.724 when High recall is held at 0.80 or more. The final model does not use the weights from this RDD2022 experiment.
 
 ### 3.12 Relabelling outcome and retraining on the final labels
 
@@ -153,7 +153,7 @@ The integrated pipeline was split so that each stage can also be used alone, fro
 
 ### 3.14 Pre-trained RF-DETR detector (final model v2)
 
-**RF-DETR (final model v2).** RF-DETR is Roboflow's real-time detection transformer with a DINOv2 backbone, pre-trained by Roboflow and built for fine-tuning on small custom datasets (package rfdetr 1.12.1, Apache-2.0). The Medium size was fine-tuned on the Khota training photos with Surface Damage split into Low–Medium and High sub-classes, merged back into the two requested output classes at output. Alone it scores mAP@0.5 0.418 on validation (best mean F1 0.458), against 0.379 (F1 0.389) for the 7-YOLO ensemble. Running it also on the mirrored photo and fusing both passes, weighted 4×, with the 7 YOLO detectors gave the best validation result, chosen as the final detector: **mAP@0.5 0.446** (Curb Ramp 0.659, Surface Damage 0.233), detection threshold 0.15 chosen on validation. Surface Damage AP rises by 58% over v1 (0.147 → 0.233). The severity classifiers are unchanged.
+**RF-DETR (final model v2).** RF-DETR is Roboflow's real-time detection transformer with a DINOv2 backbone, pre-trained by Roboflow and built for fine-tuning on small custom datasets (package rfdetr 1.12.1, Apache-2.0). The Medium size was fine-tuned on the Khota training photos with Surface Damage split into Low–Medium and High sub-classes, which are combined into one Surface Damage class for prediction. Alone it scores mAP@0.5 0.418 on validation (best mean F1 0.458), against 0.379 (F1 0.389) for the 7-YOLO ensemble. Running it also on the mirrored photo and fusing both passes, weighted 4×, with the 7 YOLO detectors gave the best validation result, chosen as the final detector: **mAP@0.5 0.446** (Curb Ramp 0.659, Surface Damage 0.233), detection threshold 0.15 chosen on validation. Surface Damage AP rises by 58% over v1 (0.147 → 0.233). The severity classifiers are unchanged.
 
 Other experiments in the same round (validation): YOLO trained with the Surface Damage sub-classes improved the YOLOv8n trio from 0.320 to 0.353; all 17 YOLO models together reached 0.390; running the detectors at 800 px or rescaling Surface Damage boxes gave no reliable gain. For severity, DINOv2 features with a logistic probe, averaged with the ResNet-18 ensemble, raised AUC from 0.871 to 0.897 but not Macro-F1 at High recall ≥ 0.80 (0.751 against 0.788), so the severity model was kept. Inception v3 (3 seeds × 2 recipes) was also tried: alone AUC 0.83; averaged with ResNet-18, Macro-F1 0.744 at High recall 0.81 against 0.788 — no gain.
 
@@ -178,7 +178,7 @@ v2 = the packaged model: RF-DETR + 7 YOLO detectors and 6 ResNet-18 severity cla
 
 ![severity confusion matrix](figures/severity_confusion_matrix.png)
 
-Test: 156 labelled defects, 24 High. The classifier catches 17 of the 24 High defects (recall 0.708) and flags 15 Low–Medium defects as High.<br><br>On validation it catches 81% of High defects against 40% for the baseline model, at a higher Macro-F1. On test the gain is smaller; with 24 High defects one case moves recall by 0.04, so the test split neither confirms nor rules out the validation gain. To favour precision instead, raise *high_threshold* in *pipeline.json* (e.g. to 0.5).
+Test: 156 labelled defects, 24 High. The classifier catches 17 of the 24 High defects (recall 0.708) and flags 15 Low–Medium defects as High.<br><br>On validation it catches 81% of High defects against 40% for the baseline model, at a higher Macro-F1. On test the gain is smaller; with 24 High defects one case moves recall by 0.04, so the test split neither confirms nor rules out the validation gain. On validation, raising the High threshold from 0.29 to 0.50 increased High precision from 0.57 to 0.68 and lowered High recall from 0.81 to 0.50.
 
 ### 4.2 Detector
 
@@ -223,7 +223,7 @@ v2 at the configured confidence (0.15) on test: Curb Ramp precision 0.44 / recal
 | High-severity Surface Damage found (IoU ≥ 0.1) | 0.65 | 0.79 |
 | severity correct on detections that match a label | 50 / 61 (82%) | 40 / 50 (80%) |
 
-The detection confidence (0.15) maximises F1 on validation. For field screening, where a missed defect costs more than a false alarm, it can be lowered in *pipeline.json*; the trade-off should be set on validation photos (results/threshold_tables_val.xlsx).
+At the chosen confidence of 0.15, the model flagged 66 of 77 validation photos with a labelled defect and 10 of 27 without one. At 0.10 it flagged 73 and 15, respectively (results/threshold_tables_val.json).
 
 ### 4.4 Detection plots
 
@@ -282,16 +282,16 @@ Validation photos, v2 at the configured thresholds. Green = label, red = detecti
 | CPU only: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, 8 threads | 1.8 s (mean 1.9) | 1.7 GB | 1.3 GB | 5 s |
 | GPU: NVIDIA GeForce RTX 3070 Laptop GPU | 0.6 s (mean 0.6) | 2.0 GB | 1.2 GB | 5 s |
 
-Full v2 pipeline as the app calls it: 20 original validation photos (4032 × 3024, 3.0 defects per photo on average), timed after one warm-up photo. A server running v2 on CPU needs at least 4 GB of RAM.
+Full v2 pipeline as the app calls it: 20 original validation photos (4032 × 3024, 3.0 defects per photo on average), timed after one warm-up photo. On the CPU run, the process used about 1,693 MB of RAM at its peak.
 
 ## 5. Why Surface Damage detection is low
 
-Every single model scores about 0.10 mAP@0.5 on Surface Damage (0.08 with the original labels); even the 7-model ensemble reaches only 0.15–0.17. The evidence points at the labels, not the model:
+Surface Damage scored lower than Curb Ramp in the detector runs. The validation results and label checks show where some detections were missed or counted as errors.
 
-1. **Model size and resolution make no difference.** YOLOv8n at 640 and 1280 px, YOLO26-s and YOLO26-m all land between 0.05 and 0.12 on Surface Damage, while the same models on the same photos reach 0.5–0.6 on Curb Ramp. A small-object or capacity problem would improve with 1280 px or a larger model.
+1. **Model size and image resolution.** In section 4.2, Surface Damage AP was 0.047 for YOLOv8n at 1280 px and 0.090 for YOLO26-m at 640 px. These runs used different versions of the labels.
 2. **The detector finds the damage but draws a different box than the label.** On validation, Surface Damage AP is 0.21 at IoU ≥ 0.1 but 0.09 at IoU ≥ 0.5; out of fold over all photos about half of the Surface Damage boxes are hit at IoU ≥ 0.1 but only about 20% at IoU ≥ 0.5. For Curb Ramp the numbers are almost the same. Where a damaged area starts and ends — one big box or several small ones — is drawn differently from photo to photo, so a detection on the right damage often counts as wrong.
-3. **Labels are incomplete.** Checking the 70 most confident Surface Damage detections that matched no label found real, unlabelled damage in about half of them (33 boxes added). Only the most confident were checked; the rest of the data has the same gaps. A model that correctly finds unlabelled damage is counted as wrong.
-4. **Automatic relabelling does not work.** The pseudo-labelling attempt (3.10) found mostly look-alikes: manholes, grates, paint, steps. The labels have to be corrected by hand, with clear rules.
+3. **Labels are incomplete.** A review of the 70 most confident Surface Damage detections without a matching label led to 33 new boxes. During evaluation, a detection with no matching label counts as a false positive.
+4. **Automatic label suggestions.** Of the 40 suggestions checked in section 3.10, 8 were clear defects, 9 were borderline and 23 were look-alikes such as grates and painted curbs.
 5. **The class is broad and its boundary is subjective.** Surface Damage covers hairline cracks, peeling, crumbling edges, missing tiles and potholes. A quarter of the boxes cover less than 0.35% of the photo. Whether a worn tile or a small curb chip counts as damage varies from photo to photo.
 
 
@@ -332,12 +332,12 @@ All results on the validation split (location-separated photos); every choice wa
 | 2. Baseline setup reproduced (YOLOv8n 640; ResNet-18, threshold 0.5) | Detection mAP@0.5 0.324 (CR 0.564, SD 0.085); severity Macro-F1 0.695, High recall 0.40 | Baseline |
 | 3. Label review: 111 changes, each logged in the annotation workbook | Issue fixed in 8 of 14 photos; the other 6 checked and genuinely High | Kept |
 | 4. Severity classifier: losses, balanced sampling, ResNet-18/50, EfficientNet-B0, ConvNeXt-T, seed ensembles, flip TTA | 6 x ResNet-18 ensemble: Macro-F1 0.788, High recall 0.81 (baseline 0.695 / 0.40) | Kept (final severity model) |
-| 5. Detector size and resolution: YOLOv8n, YOLO26-s, YOLO26-m, 1280 px | All about 0.31 overall; Surface Damage 0.05-0.12 for every model | Showed the limit is not the model |
+| 5. Detector size and resolution: YOLOv8n, YOLO26-s, YOLO26-m, 1280 px | All about 0.31 overall; Surface Damage 0.05-0.12 for every model | Kept 640 px for YOLO |
 | 6. Pipeline preprocessing fix (1280 px, high-quality downscaling) | Curb Ramp recall at the deployed threshold 0.30 -> 0.44 | Kept |
 | 7. Ensemble of 7 YOLO detectors (weighted box fusion) | mAP@0.5 0.379 (CR 0.611, SD 0.147) | Kept (v1) |
 | 8. Automatic relabelling (pseudo-labels from cross-trained models) | 40 most confident: 8 real defects, 23 look-alikes (manholes, grates, paint) | Dropped |
 | 9. Surface Damage relabelling in Roboflow with fixed rules (300 photos) | 49 changes in 37 photos; most labels already followed the rules | Logged; pass stopped |
-| 10. Public road-damage data RDD2022 (26,823 photos) for pre-training | No gain: YOLO26-s 0.306 vs 0.302-0.323; severity worse (0.773 vs 0.788) | Dropped: road photos from a car and a different box style |
+| 10. Public road-damage data RDD2022 (26,823 photos) for pre-training | No gain: YOLO26-s 0.306 vs 0.302-0.323; severity worse (0.773 vs 0.788) | RDD2022 weights left out of the final model |
 | 11. Retraining all 13 models on the corrected labels | Detector 0.347 vs 0.379; severity 0.776 vs 0.788 (run-to-run noise) | Dropped |
 | 12. Larger YOLO ensembles (13 and 17 models) | 0.387 / 0.390, same F1 at the operating point, 2x slower | Dropped |
 | 13. Surface Damage split into Low-Medium / High sub-classes during training | YOLOv8n trio 0.320 -> 0.353 | Kept (used for RF-DETR) |
@@ -345,14 +345,14 @@ All results on the validation split (location-separated photos); every choice wa
 | 15. Foundation-model features for severity (DINOv2 S/B/L) and Inception v3 | AUC up to 0.897, but Macro-F1 at High recall >= 0.80 lower (0.751 / 0.744 vs 0.788) | Dropped |
 | 16. RF-DETR Medium: pre-trained detection transformer (DINOv2 backbone) | Alone 0.418 (CR 0.639, SD 0.198); best F1 0.458 vs 0.389 | Kept |
 | 17. RF-DETR on the mirrored photo + fusion with the 7 YOLO (RF-DETR weighted 4x) | mAP@0.5 0.446 (CR 0.659, SD 0.233); High-severity defects caught 23% -> 38% | Final model v2 |
-| 18. Second RF-DETR (another seed) | Weaker than the first on validation; not finished in time | Not used |
+| 18. Second RF-DETR (another seed) | Lower validation score than the first run before training stopped | Not used |
 
 ## 9. What limits accuracy
 
 * **Surface Damage labels are inconsistent in extent.** The best model scores 0.43 AP when a detection only has to point at the right damage (IoU ≥ 0.1) but 0.23 when it must match the drawn box (IoU ≥ 0.5). The same kind of damage is drawn as one large box in one photo and as several small boxes in another.
 * **Labels are incomplete.** About half of the most confident “false” detections that were checked were real damage nobody had labelled, so a better model is penalised for finding them.
 * **The class mixes very different damage.** Hairline cracks and peeling (most boxes) share one class with missing paving and holes. Detectors trained with the two kinds separated learn them better.
-* **The dataset is small for this variety.** 482 training photos with 620 Surface Damage boxes (115 High) and 112 Curb Ramp boxes. Every model family tried - YOLO of every size, a detection transformer, CNN and ViT classifiers - ends at a similar ceiling, which is the signature of a data limit, not a model limit.
+* **The dataset is small for this variety.** 482 training photos with 620 Surface Damage boxes (115 High) and 112 Curb Ramp boxes. With the final validation labels, Surface Damage AP was 0.147 for the seven YOLO detectors together and 0.233 after adding RF-DETR.
 
 ## 10. Surface Damage validation results
 

@@ -2,7 +2,7 @@
 
 Surface Damage mixes hairline cracks (Low-Medium) with missing paving and holes (High), which look very different.
 A detector may learn the two visually consistent sub-classes more easily than the mixed class. The sub-classes are
-merged back into the two requested output classes at prediction time (khota.ensemble.merge_subclasses, driven by the model's
+merged back into the two output classes at prediction time (khota.ensemble.merge_subclasses, driven by the model's
 class names "<type>|<severity>"), so outputs, metrics and the API stay exactly as before.
 
 Classes: 0 Curb Ramp Issue | 1 Surface Damage|LM | 2 Surface Damage|HIGH   (Curb Ramp is not split: 39 High boxes)

@@ -14,5 +14,4 @@ In a Python environment, from this folder:
 The evaluation verifies the checkpoint, manifest, images, and labels by SHA-256.
 The original Colab notebook is included as provenance. The data folder contains
 all files needed for this validation rerun. Rerun results are written to
-rerun_results.json. The old Word report describes an approximate F1 of 0.60
-without a run ID or split, so its historical attribution remains unverified.
+rerun_results.json.
