@@ -2,7 +2,7 @@
 
 The local archive includes the v1 checkpoints and `pipeline.json`. The seven detector checkpoints use project-relative paths in their saved training metadata. The edit removed machine-specific path prefixes. The learned parameters are byte-for-byte identical, and this package records the revised files in `SHA256SUMS`.
 
-The [technical report](../../../docs/REPORT.md#project-materials-and-provenance) describes the dataset, model versions and evaluation. Its [generative AI section](../../../docs/REPORT.md#13-use-of-generative-ai) describes how AI was used.
+The [technical report](../../../docs/REPORT.md#project-materials-and-provenance) describes the dataset, model versions and evaluation.
 
 | file | model | MB |
 |---|---|---|

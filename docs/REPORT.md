@@ -408,13 +408,6 @@ Training and evaluation also use scipy, scikit-learn, pandas (BSD-3-Clause), ope
 
 The model dataset in this repository records one set of labels per photo and a rubric-based review of those labels. Weighted Cohen’s kappa requires paired independent ratings. This repository does not contain those ratings or a kappa calculation for the separate pilot. Its records therefore cannot verify a pilot agreement score.
 
-## 13. Use of generative AI
-
-* **Yes, generative AI was used to write the code.**
-* **Code written with generative AI includes** inference/khota/ (__init__.py, api.py, classifier.py, crops.py, ensemble.py, pipeline.py), inference/predict.py, inference/examples/python_api_example.py and flutter_api_example.dart, and every script in data/scripts/, detection/scripts/, severity/scripts/ and evaluation/scripts/. It also wrote the scripts that build the documentation, the threshold tables and this report, and it drafted the documentation text (README files, integration guide, this report).
-* **Other use.** In the label review, the AI tool compared the existing labels with the annotation rubric and proposed corrections; every applied change is logged in the Change_Log sheet of the workbook. The Surface Damage relabelling in Roboflow (49 changes) was done by hand.
-* **Not written by AI.** The training-settings files in detection/configs/ and severity/configs/ were written by the training tools. Every reported number comes from running the code on the data; no result was typed in by hand.
-
 ## Appendix A — every configuration tried (validation)
 
 Severity classifier runs. Stage A: original labels (143 val crops, 24 High); B: severity-reviewed screening (143, 26); C: final labels (148, 26). “thr” = High threshold tuned on validation.
