@@ -1,6 +1,12 @@
 # Model files — v2
 
-This local copy includes 14 v2 checkpoints (526 MB) alongside `pipeline.json`. To restore them from the shared Drive archive, extract the checkpoint files into this folder. The repository ignores checkpoint binaries. Verify the files against the supplied manifest before running inference.
+The 14 v2 checkpoints in this folder are stored with Git LFS. With Git LFS installed, run this command from the repository root to download them:
+
+```bash
+git lfs pull --include="inference/weights/*"
+```
+
+Verify the downloaded files against `SHA256SUMS` before running inference.
 
 | file | model | MB |
 |---|---|---|

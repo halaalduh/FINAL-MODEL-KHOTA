@@ -1,7 +1,7 @@
 # Khota model — app integration guide
 
 Model version **v2**. This package contains everything needed to run the Khota sidewalk-defect model as a
-service for the app: the inference code, an HTTP API, a command-line tool and API examples. The weight files are distributed separately.
+service for the app: the inference code, an HTTP API, a command-line tool and API examples. The v2 checkpoints are available through Git LFS.
 
 The model can be used in three ways, all from the same files:
 
@@ -51,7 +51,7 @@ The two stages are also usable on their own:
 | `requirements.txt` | dependencies |
 | `examples/` | Saved example responses (`sample_response.json` for `/predict`, `sample_response_detect.json`, `sample_response_severity.json`), `python_api_example.py`, `flutter_api_example.dart` |
 
-All weights for this package are included in `weights/`. See `weights/README.md` for the file list and checksum instructions.
+See the [weights README](weights/README.md) for the Git LFS download command, file list and checksum instructions.
 
 ## 3. Requirements and installation
 
