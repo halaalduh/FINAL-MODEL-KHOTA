@@ -1,0 +1,38 @@
+# Khota model repository: photos, generated datasets, training runs and model files stay out of git.
+
+# --- data: only the README, the split, the annotations and the scripts are committed
+data/*
+!data/README.md
+!data/splits/
+!data/splits/split.csv
+!data/splits/split_report.json
+!data/annotations/
+!data/scripts/
+datasets/
+
+# --- local checkpoints
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+
+# --- images: only the sample photos and the report figures are committed
+*.jpg
+*.jpeg
+*.png
+!docs/figures/*.png
+!docs/figures/*.jpg
+!results/plots/*.png
+!results/examples/*.jpg
+
+# --- training and evaluation outputs
+runs/
+
+# --- secrets and local environments
+.env
+*.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
