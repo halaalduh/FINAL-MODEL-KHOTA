@@ -52,16 +52,15 @@ The two stages are also usable on their own:
 ## 3. Requirements and installation
 
 * Python 3.11 (tested), Windows or Linux.
-* About 2 GB RAM. A GPU is optional.
-* Measured time for one 4032 px phone photo: about **0.45 s on an NVIDIA RTX 3070 laptop GPU** and about
-  **1.7 s on that laptop's CPU**.
+* Inference supports CPU and GPU.
+* One 4032 px phone photo took about **0.45 s on GPU** and **1.7 s on CPU**.
 * Models load once at start-up (a few seconds).
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate                 # Linux/macOS: source .venv/bin/activate
 # PyTorch first, ONE of:
-pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124   # NVIDIA GPU
+pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124   # CUDA GPU
 pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu     # Linux/Windows CPU wheels
 # macOS: pip install torch==2.6.0 torchvision==0.21.0
 pip install -r requirements.txt

@@ -1,6 +1,6 @@
 # Khota inference — tested with Python 3.11.
 # 1) Install PyTorch first, ONE of:
-#    GPU (NVIDIA, CUDA 12.4):  pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
+#    GPU (CUDA 12.4):  pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
 #    CPU only:                 pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
 # 2) Then:                     pip install -r requirements.txt
 ultralytics==8.4.84

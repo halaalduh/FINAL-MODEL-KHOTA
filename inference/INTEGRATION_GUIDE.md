@@ -56,16 +56,15 @@ All weights for this package are included in `weights/`. See `weights/README.md`
 ## 3. Requirements and installation
 
 * Python 3.11 (tested), Windows or Linux.
-* About 2 GB RAM. A GPU is optional.
-* Measured time for one 4032 px phone photo on an NVIDIA RTX 3070 laptop GPU: about **1.0 s**
-  (`processing_ms` in the sample response). The CPU works too, but is several times slower.
+* Inference supports CPU and GPU.
+* One 4032 px photo took about **1.0 s** on GPU in the [example response](examples/sample_response.json).
 * Models load once at start-up (a few seconds).
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate                 # Linux/macOS: source .venv/bin/activate
 # PyTorch first, ONE of:
-pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124   # NVIDIA GPU
+pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124   # CUDA GPU
 pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu     # Linux/Windows CPU wheels
 # macOS: pip install torch==2.6.0 torchvision==0.21.0
 pip install -r requirements.txt
@@ -476,7 +475,7 @@ Leave every other key unchanged; they must match the model files. A new model pa
 
 **Test split (scored once, with the thresholds below):** mAP@0.5 0.375 (Curb Ramp 0.557, Surface Damage 0.193); severity Macro-F1 0.761, High recall 0.708; 89% of the photos with a defect flagged, 22% false alarms on photos without one. Details: `results/test_metrics_v2.json` in the repository.
 
-**Speed and memory:** CPU only (11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz) 1.8 s per photo (median), peak RAM 1.7 GB; GPU (NVIDIA GeForce RTX 3070 Laptop GPU) 0.6 s per photo. Full pipeline on original photos (`results/benchmark_v2_cpu.json`).
+On 20 validation photos, median time per photo was **1.8 s on CPU** and **0.6 s on GPU**. Peak process RAM was **1.7 GB** and **2.0 GB**, respectively. See the [CPU results](../results/benchmark_v2_cpu.json) and [GPU results](../results/benchmark_v2_cuda.json).
 
 **Licenses:** `docs/LICENSES.md` in the repository. The YOLO detectors run on Ultralytics, which is AGPL-3.0; RF-DETR is Apache-2.0.
 

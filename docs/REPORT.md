@@ -279,8 +279,8 @@ Validation photos, v2 at the configured thresholds. Green = label, red = detecti
 
 | device | time per photo (median) | peak RAM | RAM after loading | model loading |
 |---|---|---|---|---|
-| CPU only: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz, 8 threads | 1.8 s (mean 1.9) | 1.7 GB | 1.3 GB | 5 s |
-| GPU: NVIDIA GeForce RTX 3070 Laptop GPU | 0.6 s (mean 0.6) | 2.0 GB | 1.2 GB | 5 s |
+| CPU | 1.8 s (mean 1.9) | 1.7 GB | 1.3 GB | 5 s |
+| GPU | 0.6 s (mean 0.6) | 2.0 GB | 1.2 GB | 5 s |
 
 Full v2 pipeline as the app calls it: 20 original validation photos (4032 × 3024, 3.0 defects per photo on average), timed after one warm-up photo. On the CPU run, the process used about 1,693 MB of RAM at its peak.
 
